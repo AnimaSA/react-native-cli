@@ -12,7 +12,7 @@ import logger from '../../tools/logger';
 
 function tryLaunchAppOnDevice(
   device: string,
-  packageNameWithSuffix: string,
+  launchPackageName: string,
   packageName: string,
   adbPath: string,
   mainActivity: string,
@@ -25,7 +25,7 @@ function tryLaunchAppOnDevice(
       'am',
       'start',
       '-n',
-      `${packageNameWithSuffix}/${packageName}.${mainActivity}`,
+      `${launchPackageName}/${packageName}.${mainActivity}`,
     ];
     logger.info(
       `Starting the app on ${device} (${adbPath} ${adbArgs.join(' ')})...`,
