@@ -20,6 +20,7 @@ import runOnAllDevices from './runOnAllDevices';
 import tryRunAdbReverse from './tryRunAdbReverse';
 import tryLaunchAppOnDevice from './tryLaunchAppOnDevice';
 import getAdbPath from './getAdbPath';
+import getLaunchPackageName from './getLaunchPackageName';
 import logger from '../../tools/logger';
 
 // Verifies this is an Android project
@@ -56,17 +57,6 @@ function runAndroid(argv: Array<string>, ctx: ContextT, args: Object) {
   });
 }
 
-function getPackageNameWithSuffix(appId, appIdSuffix, packageName) {
-  if (appId) {
-    return appId;
-  }
-  if (appIdSuffix) {
-    return `${packageName}.${appIdSuffix}`;
-  }
-
-  return packageName;
-}
-
 // Builds the app and runs it on a connected emulator / device.
 function buildAndRun(args) {
   process.chdir(path.join(args.root, 'android'));
@@ -79,19 +69,12 @@ function buildAndRun(args) {
     // $FlowFixMe
     .match(/package="(.+?)"/)[1];
 
-  const packageNameWithSuffix = getPackageNameWithSuffix(
-    args.appId,
-    args.appIdSuffix,
-    packageName,
-  );
-
   const adbPath = getAdbPath();
   if (args.deviceId) {
     if (isString(args.deviceId)) {
       return runOnSpecificDevice(
         args,
         cmd,
-        packageNameWithSuffix,
         packageName,
         adbPath,
       );
@@ -101,7 +84,6 @@ function buildAndRun(args) {
     return runOnAllDevices(
       args,
       cmd,
-      packageNameWithSuffix,
       packageName,
       adbPath,
     );
@@ -111,7 +93,6 @@ function buildAndRun(args) {
 function runOnSpecificDevice(
   args,
   gradlew,
-  packageNameWithSuffix,
   packageName,
   adbPath,
 ) {
@@ -122,7 +103,6 @@ function runOnSpecificDevice(
       installAndLaunchOnDevice(
         args,
         args.deviceId,
-        packageNameWithSuffix,
         packageName,
         adbPath,
       );
@@ -212,7 +192,6 @@ function getInstallApkName(
 function installAndLaunchOnDevice(
   args,
   selectedDevice,
-  packageNameWithSuffix,
   packageName,
   adbPath,
 ) {
@@ -220,7 +199,7 @@ function installAndLaunchOnDevice(
   tryInstallAppOnDevice(args, adbPath, selectedDevice);
   tryLaunchAppOnDevice(
     selectedDevice,
-    packageNameWithSuffix,
+    getLaunchPackageName(args.variant),
     packageName,
     adbPath,
     args.mainActivity,
