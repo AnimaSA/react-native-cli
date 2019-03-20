@@ -72,40 +72,20 @@ function buildAndRun(args) {
   const adbPath = getAdbPath();
   if (args.deviceId) {
     if (isString(args.deviceId)) {
-      return runOnSpecificDevice(
-        args,
-        cmd,
-        packageName,
-        adbPath,
-      );
+      return runOnSpecificDevice(args, cmd, packageName, adbPath);
     }
     logger.error('Argument missing for parameter --deviceId');
   } else {
-    return runOnAllDevices(
-      args,
-      cmd,
-      packageName,
-      adbPath,
-    );
+    return runOnAllDevices(args, cmd, packageName, adbPath);
   }
 }
 
-function runOnSpecificDevice(
-  args,
-  gradlew,
-  packageName,
-  adbPath,
-) {
+function runOnSpecificDevice(args, gradlew, packageName, adbPath) {
   const devices = adb.getDevices(adbPath);
   if (devices && devices.length > 0) {
     if (devices.indexOf(args.deviceId) !== -1) {
       buildApk(gradlew);
-      installAndLaunchOnDevice(
-        args,
-        args.deviceId,
-        packageName,
-        adbPath,
-      );
+      installAndLaunchOnDevice(args, args.deviceId, packageName, adbPath);
     } else {
       logger.error(
         `Could not find device with the id: "${
@@ -189,12 +169,7 @@ function getInstallApkName(
   throw new Error('Not found the correct install APK file!');
 }
 
-function installAndLaunchOnDevice(
-  args,
-  selectedDevice,
-  packageName,
-  adbPath,
-) {
+function installAndLaunchOnDevice(args, selectedDevice, packageName, adbPath) {
   tryRunAdbReverse(args.port, selectedDevice);
   tryInstallAppOnDevice(args, adbPath, selectedDevice);
   tryLaunchAppOnDevice(
