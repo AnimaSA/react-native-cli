@@ -20,6 +20,7 @@ import runOnAllDevices from './runOnAllDevices';
 import tryRunAdbReverse from './tryRunAdbReverse';
 import tryLaunchAppOnDevice from './tryLaunchAppOnDevice';
 import getAdbPath from './getAdbPath';
+import getLaunchPackageName from './getLaunchPackageName';
 import logger from '../../tools/logger';
 
 // Verifies this is an Android project
@@ -56,17 +57,6 @@ function runAndroid(argv: Array<string>, ctx: ContextT, args: Object) {
   });
 }
 
-function getPackageNameWithSuffix(appId, appIdSuffix, packageName) {
-  if (appId) {
-    return appId;
-  }
-  if (appIdSuffix) {
-    return `${packageName}.${appIdSuffix}`;
-  }
-
-  return packageName;
-}
-
 // Builds the app and runs it on a connected emulator / device.
 function buildAndRun(args) {
   process.chdir(path.join(args.root, 'android'));
@@ -79,53 +69,23 @@ function buildAndRun(args) {
     // $FlowFixMe
     .match(/package="(.+?)"/)[1];
 
-  const packageNameWithSuffix = getPackageNameWithSuffix(
-    args.appId,
-    args.appIdSuffix,
-    packageName,
-  );
-
   const adbPath = getAdbPath();
   if (args.deviceId) {
     if (isString(args.deviceId)) {
-      return runOnSpecificDevice(
-        args,
-        cmd,
-        packageNameWithSuffix,
-        packageName,
-        adbPath,
-      );
+      return runOnSpecificDevice(args, cmd, packageName, adbPath);
     }
     logger.error('Argument missing for parameter --deviceId');
   } else {
-    return runOnAllDevices(
-      args,
-      cmd,
-      packageNameWithSuffix,
-      packageName,
-      adbPath,
-    );
+    return runOnAllDevices(args, cmd, packageName, adbPath);
   }
 }
 
-function runOnSpecificDevice(
-  args,
-  gradlew,
-  packageNameWithSuffix,
-  packageName,
-  adbPath,
-) {
+function runOnSpecificDevice(args, gradlew, packageName, adbPath) {
   const devices = adb.getDevices(adbPath);
   if (devices && devices.length > 0) {
     if (devices.indexOf(args.deviceId) !== -1) {
       buildApk(gradlew);
-      installAndLaunchOnDevice(
-        args,
-        args.deviceId,
-        packageNameWithSuffix,
-        packageName,
-        adbPath,
-      );
+      installAndLaunchOnDevice(args, args.deviceId, packageName, adbPath);
     } else {
       logger.error(
         `Could not find device with the id: "${
@@ -209,18 +169,12 @@ function getInstallApkName(
   throw new Error('Not found the correct install APK file!');
 }
 
-function installAndLaunchOnDevice(
-  args,
-  selectedDevice,
-  packageNameWithSuffix,
-  packageName,
-  adbPath,
-) {
+function installAndLaunchOnDevice(args, selectedDevice, packageName, adbPath) {
   tryRunAdbReverse(args.port, selectedDevice);
   tryInstallAppOnDevice(args, adbPath, selectedDevice);
   tryLaunchAppOnDevice(
     selectedDevice,
-    packageNameWithSuffix,
+    getLaunchPackageName(args.variant),
     packageName,
     adbPath,
     args.mainActivity,
