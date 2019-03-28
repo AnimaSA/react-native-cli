@@ -258,7 +258,7 @@ function startServerInNewWindow(
    */
   const scriptsDir = path.dirname(launchPackagerScript);
   const packagerEnvFile = path.join(scriptsDir, packagerEnvFilename);
-  const procConfig: Object = {cwd: scriptsDir};
+  const procConfig: Object = {cwd: scriptsDir, env: process.env};
 
   /**
    * Ensure we overwrite file by passing the `w` flag
