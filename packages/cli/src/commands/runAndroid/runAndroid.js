@@ -233,6 +233,13 @@ function startServerInNewWindow(
   reactNativePath,
 ) {
   /**
+   * Set up the path to `metro.config.js` file to inform the packager of the project's root.
+   */
+  const metroConfigPath = path.join(reactNativePath, '../../metro.config.js');
+  const metroConfig = require(metroConfigPath);
+  const projectRoot =
+    metroConfig.projectRoot || path.resolve(reactNativePath, '../../');
+  /**
    * Set up OS-specific filenames and commands
    */
   const isWindows = /^win/.test(process.platform);
@@ -272,25 +279,33 @@ function startServerInNewWindow(
     if (terminal) {
       return spawnSync(
         'open',
-        ['-a', terminal, launchPackagerScript],
+        ['-a', terminal, launchPackagerScript, projectRoot],
         procConfig,
       );
     }
-    return spawnSync('open', [launchPackagerScript], procConfig);
+    return spawnSync('open', [launchPackagerScript, projectRoot], procConfig);
   }
   if (process.platform === 'linux') {
     if (terminal) {
       procConfig.detached = true;
-      return spawn(terminal, ['-e', `sh ${launchPackagerScript}`], procConfig);
+      return spawn(
+        terminal,
+        ['-e', `sh ${launchPackagerScript}`, projectRoot],
+        procConfig,
+      );
     }
     // By default, the child shell process will be attached to the parent
     procConfig.detached = false;
-    return spawn('sh', [launchPackagerScript], procConfig);
+    return spawn('sh', [launchPackagerScript, projectRoot], procConfig);
   }
   if (/^win/.test(process.platform)) {
     procConfig.detached = true;
     procConfig.stdio = 'ignore';
-    return spawn('cmd.exe', ['/C', launchPackagerScript], procConfig);
+    return spawn(
+      'cmd.exe',
+      ['/C', launchPackagerScript, projectRoot],
+      procConfig,
+    );
   }
   logger.error(
     `Cannot start the packager. Unknown platform ${process.platform}`,
