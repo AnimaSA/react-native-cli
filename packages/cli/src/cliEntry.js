@@ -10,22 +10,20 @@
 import chalk from 'chalk';
 import childProcess from 'child_process';
 import commander from 'commander';
-import minimist from 'minimist';
 import path from 'path';
-import type {CommandT, ContextT} from './tools/types.flow';
-import getLegacyConfig from './tools/getLegacyConfig';
-import {getCommands} from './commands';
-import init from './commands/init/init';
+
+import type {CommandT, ConfigT} from './tools/config/types.flow';
+
+import commands from './commands';
+import init from './commands/init/initCompat';
 import assertRequiredOptions from './tools/assertRequiredOptions';
-import logger from './tools/logger';
-import findPlugins from './tools/findPlugins';
-import {setProjectDir} from './tools/PackageManager';
+import {logger} from '@react-native-community/cli-tools';
+import {setProjectDir} from './tools/packageManager';
 import pkgJson from '../package.json';
+import loadConfig from './tools/config';
 
 commander
   .option('--version', 'Print CLI version')
-  .option('--projectRoot [string]', 'Path to the root of the project')
-  .option('--reactNativePath [string]', 'Path to React Native')
   .option('--verbose', 'Increase logging verbosity');
 
 commander.on('command:*', () => {
@@ -36,7 +34,20 @@ commander.on('command:*', () => {
 const defaultOptParser = val => val;
 
 const handleError = err => {
-  logger.error(err.message);
+  if (commander.verbose) {
+    logger.error(err.message);
+  } else {
+    // Some error messages (esp. custom ones) might have `.` at the end already.
+    const message = err.message.replace(/\.$/, '');
+    logger.error(
+      `${message}. ${chalk.dim(
+        `Run CLI with ${chalk.reset('--verbose')} ${chalk.dim(
+          'flag for more details.',
+        )}`,
+      )}`,
+    );
+  }
+  logger.debug(chalk.dim(err.stack));
   process.exit(1);
 };
 
@@ -84,7 +95,7 @@ function printUnknownCommand(cmdName) {
   }
 }
 
-const addCommand = (command: CommandT, ctx: ContextT) => {
+const addCommand = (command: CommandT, ctx: ConfigT) => {
   const options = command.options || [];
 
   const cmd = commander
@@ -117,15 +128,6 @@ const addCommand = (command: CommandT, ctx: ContextT) => {
       opt.default,
     ),
   );
-
-  /**
-   * We want every command (like "start", "link") to accept below options.
-   * To achieve that we append them to regular options of each command here.
-   * This way they'll be displayed in the commands --help menus.
-   */
-  cmd
-    .option('--projectRoot [string]', 'Path to the root of the project')
-    .option('--reactNativePath [string]', 'Path to React Native');
 };
 
 async function run() {
@@ -156,45 +158,11 @@ async function setupAndRun() {
     }
   }
 
-  /**
-   * At this point, commander arguments are not parsed yet because we need to
-   * add all the commands and their options. That's why we resort to using
-   * minimist for parsing some global options.
-   */
-  const options = minimist(process.argv.slice(2));
-
-  const root = options.projectRoot
-    ? path.resolve(options.projectRoot)
-    : process.cwd();
-
-  const reactNativePath = options.reactNativePath
-    ? path.resolve(options.reactNativePath)
-    : (() => {
-        try {
-          return path.dirname(
-            // $FlowIssue: Wrong `require.resolve` type definition
-            require.resolve('react-native/package.json', {
-              paths: [root],
-            }),
-          );
-        } catch (_ignored) {
-          throw new Error(
-            'Unable to find React Native files. Make sure "react-native" module is installed in your project dependencies.',
-          );
-        }
-      })();
-
-  const ctx = {
-    ...getLegacyConfig(root),
-    reactNativePath,
-    root,
-  };
+  const ctx = loadConfig();
 
   setProjectDir(ctx.root);
 
-  const commands = getCommands(ctx.root);
-
-  commands.forEach(command => addCommand(command, ctx));
+  [...commands, ...ctx.commands].forEach(command => addCommand(command, ctx));
 
   commander.parse(process.argv);
 
@@ -215,7 +183,7 @@ async function setupAndRun() {
 export default {
   run,
   init,
-  findPlugins,
+  loadConfig,
 };
 
-export {run, init, findPlugins};
+export {run, init, loadConfig};
